@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Diagnostics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Linq;
@@ -14,13 +15,27 @@ using System.Collections.Concurrent;
 
 namespace ImageRecognition
 {
+    public struct PredictionResult
+    {
+        public string ClassName;
+        public string FilePath;
+        public float Proba;
+        public PredictionResult(string ClassName, string FilePath, float Proba)
+        {
+            this.ClassName = ClassName;
+            this.FilePath = FilePath;
+            this.Proba = Proba;
+        }
+    }
+
     public class OnnxClassifier
     {
-        public InferenceSession session { get; set; }
+        public InferenceSession Session { get; set; }
         static readonly string[] classLabels = System.IO.File.ReadAllLines("classLabels.txt");
+        public CancellationTokenSource CTSource = new CancellationTokenSource();
         public OnnxClassifier(string ModelPath)
         {
-            this.session = new InferenceSession(ModelPath);
+            this.Session = new InferenceSession(ModelPath);
         }
 
         private DenseTensor<float> ProcessImage(string ImgPath="sample.jpg")
@@ -58,44 +73,34 @@ namespace ImageRecognition
             return res;
         }
 
-        public string Predict(DenseTensor<float> image)
+        public PredictionResult Predict(string ImgPath)
         {
-            var input = image;
-
-            
+            var input = ProcessImage(ImgPath);
 
             // Вычисляем предсказание нейросетью
 
             var inputs = new List<NamedOnnxValue>
             {
-                NamedOnnxValue.CreateFromTensor(session.InputMetadata.Keys.First(),input)
+                NamedOnnxValue.CreateFromTensor(Session.InputMetadata.Keys.First(),input)
             };
 
-            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = Session.Run(inputs);
 
             // Получаем 1000 выходов и считаем для них softmax
             var output = results.First().AsEnumerable<float>().ToArray();
             var sum = output.Sum(x => (float)Math.Exp(x));
             var softmax = output.Select(x => (float)Math.Exp(x) / sum);
 
-            return classLabels[softmax.ToList().IndexOf(softmax.Max())];
+            return new PredictionResult(classLabels[softmax.ToList().IndexOf(softmax.Max())], ImgPath, softmax.ToList().Max());
         }
-
+        public void StopPrediction()
+        {
+            CTSource.Cancel();
+        }
         public void PredictAll(PredictionQueue cq, string DirPath)
         {
             DirectoryInfo d = new DirectoryInfo(DirPath);
             FileInfo[] Files = d.GetFiles("*.jpg");
-
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
-            Task keyBoardTask = Task.Run(() =>
-            {
-                Console.WriteLine("*** Press Esc to cancel");
-                while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape))
-                {
-                }
-                cancellationTokenSource.Cancel();
-            });
 
             var tasks = Task.Factory.StartNew(() =>
             {
@@ -103,23 +108,18 @@ namespace ImageRecognition
                 {
                     Parallel.ForEach(
                         Files,
-                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationTokenSource.Token },
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = CTSource.Token },
                         f =>
                         {
-                        cq.Enqueue(Predict(ProcessImage(f.FullName)));
+                        cq.Enqueue(Predict(f.FullName));
                         });
                 }
                 catch (OperationCanceledException)
                 {
-                    Console.WriteLine("*** Tasks were cancelled");
+                    Trace.WriteLine("*** Tasks were cancelled");
                 }
             });
             tasks.Wait();
-
-            // if (Something)
-            // cts.Cancel();
-
-
         }
     }
 }

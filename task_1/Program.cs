@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -17,13 +18,16 @@ namespace task_1
 {
     class Program
     {
-        static void PredictionCaught(object sender, EventArgs e)
+        static void PredictionCaught(object sender, PredictionEventArgs e)
         {
-            Console.WriteLine((sender as PredictionQueue).TryDequeue());
+            Console.WriteLine(String.Format("{0}\n{1} : {2}\n", e.PredictionResult.FilePath, e.PredictionResult.ClassName, e.PredictionResult.Proba));
         }
 
         static void Main(string[] args)
         {
+            ConsoleTraceListener listener = new ConsoleTraceListener();
+            Trace.Listeners.Add(listener);
+
             string ProjPath = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName;
             string DirPath = ProjPath + @"\pics_to_recognize\";
 
@@ -31,7 +35,18 @@ namespace task_1
 
             PredictionQueue cq = new PredictionQueue();
             cq.Enqueued += PredictionCaught;
+            Task keyBoardTask = Task.Run(() =>
+            {
+                Trace.WriteLine("*** Press Esc to cancel");
+                while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape))
+                {
+                }
+                clf.StopPrediction();
+            });
             clf.PredictAll(cq, DirPath);
+
+            Trace.Listeners.Remove(listener);
+            Trace.Close();
         }
     }
 }

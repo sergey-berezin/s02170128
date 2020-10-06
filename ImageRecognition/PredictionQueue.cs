@@ -5,23 +5,34 @@ using System.Text;
 
 namespace ImageRecognition
 {
+    public class PredictionEventArgs : EventArgs
+    {
+        private PredictionResult _predictionResult;
+        public PredictionResult PredictionResult { get { return _predictionResult; } }
+        public PredictionEventArgs(PredictionResult predictionResult)
+        {
+            _predictionResult = predictionResult;
+        }
+
+    }
+
     public class PredictionQueue
     {
-            private readonly ConcurrentQueue<string> queue = new ConcurrentQueue<string>();
-            public event EventHandler Enqueued;
-            protected virtual void OnEnqueued(EventArgs e)
+            private readonly ConcurrentQueue<PredictionResult> queue = new ConcurrentQueue<PredictionResult>();
+            public event EventHandler<PredictionEventArgs> Enqueued;
+            protected virtual void OnEnqueued(PredictionEventArgs e)
             {
                 if (Enqueued != null)
                     Enqueued(this, e);
             }
-            public virtual void Enqueue(string item)
+            public virtual void Enqueue(PredictionResult item)
             {
                 queue.Enqueue(item);
-                OnEnqueued(new EventArgs());
+                OnEnqueued(new PredictionEventArgs(item));
             }
-            public virtual string TryDequeue()
+            public virtual PredictionResult TryDequeue()
             {
-                string item; 
+                PredictionResult item; 
                 queue.TryDequeue(out item);
                 return item;
             }
