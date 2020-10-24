@@ -31,7 +31,7 @@ namespace ImageRecognition
     public class OnnxClassifier
     {
         public InferenceSession Session { get; set; }
-        static readonly string[] classLabels = System.IO.File.ReadAllLines("classLabels.txt");
+        static readonly string[] classLabels = System.IO.File.ReadAllLines(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName + @"\ImageRecognition\classLabels.txt");
         public CancellationTokenSource CTSource = new CancellationTokenSource();
         public OnnxClassifier(string ModelPath)
         {
