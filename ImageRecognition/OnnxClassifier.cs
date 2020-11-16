@@ -97,11 +97,8 @@ namespace ImageRecognition
         {
             CTSource.Cancel();
         }
-        public void PredictAll(PredictionQueue cq, string DirPath)
+        public void PredictAll(PredictionQueue cq, FileInfo[] Files)
         {
-            DirectoryInfo d = new DirectoryInfo(DirPath);
-            FileInfo[] Files = d.GetFiles("*.jpg");
-
             var tasks = Task.Factory.StartNew(() =>
             {
                 try

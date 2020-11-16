@@ -18,25 +18,29 @@ namespace task_2
     {
         private string className;
         public string ClassName { get { return className; } set { className = value; } }
-        private float proba;
+        public float proba;
         private string filepath;
+        public string FilePath { get { return filepath; } set { filepath = value; } }
 
-        private BitmapImage imageData;
-        public BitmapImage ImageData
+
+        private byte[] imageData;
+        public byte[] ImageData
         {
             get { return imageData; }
             set { imageData = value; }
         }
-
+        
+        public ModelPrediction() { }
         public ModelPrediction(PredictionResult pr)
         {
             ClassName = pr.ClassName;
             proba = pr.Proba;
-            filepath = pr.FilePath;
-            ImageData = new BitmapImage(new Uri(filepath));
+            filepath = pr.FilePath; 
+
+            ImageData = File.ReadAllBytes(pr.FilePath);
         }
 
-        public ModelPrediction(string ClassName, float proba, string filepath, BitmapImage ImageData)
+        public ModelPrediction(string ClassName, float proba, string filepath, byte[] ImageData)
         {
             this.ClassName = ClassName;
             this.proba = proba;

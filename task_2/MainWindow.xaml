@@ -6,11 +6,12 @@
         xmlns:local="clr-namespace:task_2"
         xmlns:viewModel="local:ViewModel.cs"
         mc:Ignorable="d"
-        Title="MainWindow" Height="480" Width="820">
+        Title="MainWindow" Height="480" Width="950">
 
     <Grid Name="MainGrid" Margin="0,0,0,-46">
-        <Button Content="Start" FontFamily="Courier"  FontSize="40" Command="{Binding OpenCommand}" HorizontalAlignment="Left" Height="57" Margin="10,367,0,0" VerticalAlignment="Top" Width="463" />
-        <Button Content="Stop" FontFamily="Courier"  FontSize="40" Command="{Binding StopCommand}" HorizontalAlignment="Left" Height="57" Margin="478,367,0,0" VerticalAlignment="Top" Width="317"/>
+        <Button Content="Start" FontFamily="Courier"  FontSize="40" Command="{Binding OpenCommand}" HorizontalAlignment="Left" Height="57" Margin="10,367,0,0" VerticalAlignment="Top" Width="200" />
+        <Button Content="Stop" FontFamily="Courier"  FontSize="40" Command="{Binding StopCommand}" HorizontalAlignment="Center" Height="57" Margin="0,367,0,0" VerticalAlignment="Top" Width="200"/>
+        <Button Content="Clear DataBase" FontFamily="Courier"  FontSize="23" Command="{Binding ClearDataBaseCommand}" HorizontalAlignment="Left" Height="57" Margin="690,367,0,0" VerticalAlignment="Top" Width="200"/>
         <ListView HorizontalAlignment="Left" ItemsSource="{Binding FilteredObservableModelPrediction}" Height="352" Margin="10,10,0,0" VerticalAlignment="Top" Width="463">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -26,7 +27,7 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-        <ListBox HorizontalAlignment="Left" ItemsSource="{Binding AvailableClasses}" SelectedItem="{Binding SelectedClass }" IsSynchronizedWithCurrentItem="True" Height="352" Margin="478,10,0,0" VerticalAlignment="Top" Width="317">
-        </ListBox>
+        <ListBox HorizontalAlignment="Left" ItemsSource="{Binding AvailableClasses}" SelectedItem="{Binding SelectedClass }" IsSynchronizedWithCurrentItem="True" Height="352" Margin="478,10,0,0" VerticalAlignment="Top" Width="200"/>
+        <ListBox HorizontalAlignment="Left" ItemsSource="{Binding Statistics}" Height="352" Margin="690,10,0,0" VerticalAlignment="Top" Width="200"/>
     </Grid>
 </Window>
