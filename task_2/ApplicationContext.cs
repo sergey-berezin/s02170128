@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using SixLabors.ImageSharp;
 using System.Collections.ObjectModel;
+using System.Windows.Controls;
 
 namespace task_2
 {
@@ -17,7 +18,7 @@ namespace task_2
         public int ImageClassID { get; set; }
         public string ClassName { get; set; }
 
-        public ICollection<DbImage> Images { get; set; }
+        public virtual ICollection<DbImage> Images { get; set; }
 
         public DbImageClass(string ClassName="")
         {
@@ -33,27 +34,37 @@ namespace task_2
         public int ImageID { get; set; }
         public float Proba { get; set; }
         public string FilePath { get; set; }
-        public byte[] ImageData { get; set; }
+        public virtual DbImageDetails ImageDetails { get; set; }
 
-        public int ImageClassID { get; set; }
-        public DbImageClass ImageClass { get; set; }
+        public virtual int ImageClassID { get; set; }
+        public virtual DbImageClass ImageClass { get; set; }
 
         public DbImage() { }
         public DbImage(PredictionResult pr)
         {
             this.Proba = pr.Proba;
             this.FilePath = pr.FilePath;
-            this.ImageData = File.ReadAllBytes(pr.FilePath);
-            
+            this.ImageDetails = new DbImageDetails(File.ReadAllBytes(pr.FilePath));
         }
 
     }
 
+    public class DbImageDetails
+    {
+        public int DbImageDetailsID {get; set;}
+        public byte[] ImageData { get; set; }
+        public DbImageDetails() { }
+        public DbImageDetails(byte[] ImageData)
+        {
+            this.ImageData = ImageData;
+        }
+    }
 
     public class ApplicationContext : DbContext
     {
         public DbSet<DbImage> Images { get; set; }
         public DbSet<DbImageClass> Classes { get; set; }
+        public DbSet<DbImageDetails> Details { get; set; }
 
         public ApplicationContext()
         {
@@ -70,7 +81,9 @@ namespace task_2
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=helloappdb;Trusted_Connection=True;");
+            optionsBuilder
+                .UseLazyLoadingProxies()
+                .UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=helloappdb;Trusted_Connection=True;");
         }
 
     }

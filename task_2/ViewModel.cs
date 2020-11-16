@@ -120,7 +120,7 @@ namespace task_2
 
         private void AddPrecomputedPrediction(DbImage di)
         {
-            var mp = new ModelPrediction(DataBaseContext.Classes.ToList().Find(p => p.ImageClassID == di.ImageClassID).ClassName, di.Proba, di.FilePath, di.ImageData);
+            var mp = new ModelPrediction(DataBaseContext.Classes.ToList().Find(p => p.ImageClassID == di.ImageClassID).ClassName, di.Proba, di.FilePath, di.ImageDetails.ImageData);
             dispatcher.BeginInvoke(new Action(() =>
             {
                 ObservableModelPrediction.Add(mp);
@@ -149,8 +149,8 @@ namespace task_2
                 {
                     DirectoryInfo d = new DirectoryInfo(fbd.SelectedPath);
                     FileInfo[] Files = d.GetFiles("*.jpg");
-                    var NewImages = Files.Where(p => !DataBaseContext.Images.AsEnumerable().Any(p2 => p2.FilePath == p.FullName && p2.ImageData.SequenceEqual(File.ReadAllBytes(p.FullName)))).ToArray();
-                    var OldImages = DataBaseContext.Images.AsEnumerable().Where(p => Files.Any(p2 => p2.FullName == p.FilePath && p.ImageData.SequenceEqual(File.ReadAllBytes(p2.FullName)))).ToArray();
+                    var NewImages = Files.Where(p => !DataBaseContext.Images.AsEnumerable().Any(p2 => p2.FilePath == p.FullName && p2.ImageDetails.ImageData.SequenceEqual(File.ReadAllBytes(p.FullName)))).ToArray();
+                    var OldImages = DataBaseContext.Images.AsEnumerable().Where(p => Files.Any(p2 => p2.FullName == p.FilePath && p.ImageDetails.ImageData.SequenceEqual(File.ReadAllBytes(p2.FullName)))).ToArray();
 
                     foreach(var i in OldImages)
                     {
@@ -186,11 +186,25 @@ namespace task_2
 
         private void ExecuteClear(object param)
         {
-            ObservableModelPrediction.Clear();
-            AvailableClasses.Clear();
-            DataBaseContext.Database.ExecuteSqlCommand("delete from Images");
-            DataBaseContext.Database.ExecuteSqlCommand("delete from Classes");
-            NotifyPropertyChanged("Statistics");
+                ObservableModelPrediction.Clear();
+                AvailableClasses.Clear();
+
+                foreach (var item in DataBaseContext.Images)
+                {
+                    DataBaseContext.Images.Remove(item);
+                }
+
+                foreach (var item in DataBaseContext.Classes)
+                {
+                    DataBaseContext.Classes.Remove(item);
+                }
+
+                foreach (var item in DataBaseContext.Details)
+                {
+                    DataBaseContext.Details.Remove(item);
+                }
+                DataBaseContext.SaveChanges();
+                NotifyPropertyChanged("Statistics");
         }
 
         private bool CanExecuteClear(object param)
