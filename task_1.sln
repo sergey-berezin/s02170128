@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29926.136
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "task_1", "task_1\task_1.csproj", "{E6FA8E7E-67D9-4D32-9BD8-9416CC7DE9C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "task_1", "task_1\task_1.csproj", "{E6FA8E7E-67D9-4D32-9BD8-9416CC7DE9C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageRecognition", "ImageRecognition\ImageRecognition.csproj", "{2C1D1A12-A986-44DA-AED8-3C023D5DC512}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageRecognition", "ImageRecognition\ImageRecognition.csproj", "{2C1D1A12-A986-44DA-AED8-3C023D5DC512}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "task_2", "task_2\task_2.csproj", "{EDD0D558-075F-4DEE-B844-4B830781AF40}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{2C1D1A12-A986-44DA-AED8-3C023D5DC512}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C1D1A12-A986-44DA-AED8-3C023D5DC512}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C1D1A12-A986-44DA-AED8-3C023D5DC512}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDD0D558-075F-4DEE-B844-4B830781AF40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDD0D558-075F-4DEE-B844-4B830781AF40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDD0D558-075F-4DEE-B844-4B830781AF40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDD0D558-075F-4DEE-B844-4B830781AF40}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
