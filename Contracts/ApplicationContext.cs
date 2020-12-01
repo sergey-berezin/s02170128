@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows.Media.Imaging;
+﻿using System.Collections.Generic;
 using System.IO;
 using ImageRecognition;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-using SixLabors.ImageSharp;
 using System.Collections.ObjectModel;
-using System.Windows.Controls;
 
-namespace task_2
+namespace Contracts
 {
     public class DbImageClass
     {
@@ -46,7 +41,7 @@ namespace task_2
             this.FilePath = pr.FilePath;
             this.ImageDetails = new DbImageDetails(File.ReadAllBytes(pr.FilePath));
         }
-
+       
     }
 
     public class DbImageDetails
@@ -82,7 +77,6 @@ namespace task_2
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder
-                .UseLazyLoadingProxies()
                 .UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=helloappdb;Trusted_Connection=True;");
         }
 

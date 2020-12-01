@@ -19,6 +19,8 @@ namespace ImageRecognition
     public class PredictionQueue
     {
             private readonly ConcurrentQueue<PredictionResult> queue = new ConcurrentQueue<PredictionResult>();
+            public ConcurrentQueue<PredictionResult> Queue { get { return queue; } }
+        
             public event EventHandler<PredictionEventArgs> Enqueued;
             protected virtual void OnEnqueued(PredictionEventArgs e)
             {

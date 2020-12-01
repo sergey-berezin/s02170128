@@ -1,49 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Windows.Forms;
-using System.IO;
-using Microsoft.Win32;
-using System.Windows.Input;
+using System.Threading;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ImageRecognition;
-using System.Windows.Media.TextFormatting;
 using System.Windows.Threading;
-using System.Threading;
 using System.Windows.Data;
 using System.Linq;
 using System.Collections.ObjectModel;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore;
-using SixLabors.ImageSharp;
+using Contracts;
 
 namespace task_2
 {
     public class ViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
-
-
+        public CancellationTokenSource cts = new CancellationTokenSource();
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
-        public ApplicationContext DataBaseContext { get; set; } = new ApplicationContext();
+        public Contracts.ApplicationContext DataBaseContext { get; set; } = new Contracts.ApplicationContext();
+        private string SERVER_URI = "http://localhost:5000/prediction";
+        public LibraryClient client = new LibraryClient("http://localhost:5000/prediction");
         public DelegateCommand OpenCommand { protected set; get; }
         public DelegateCommand StopCommand { protected set; get; }
         public DelegateCommand ClearDataBaseCommand { protected set; get; }
+        public DelegateCommand GetStatsCommand { protected set; get; }
         public ObservableCollection<ModelPrediction> ObservableModelPrediction { get; set; }
         public ICollectionView FilteredObservableModelPrediction { get; set; }
         public ObservableCollection<Tuple<string, int>> AvailableClasses { get; set; }
-        public ObservableCollection<Tuple<string, int>> Statistics { 
-            get
-            {
-                var query = from img in DataBaseContext.Images
-                            group img by img.ImageClassID into g
-                            select new { name = DataBaseContext.Classes.FirstOrDefault(p => p.ImageClassID == g.Key).ClassName, count = g.Count() };
-                return new ObservableCollection<Tuple<string, int>>(query.Select(c => new Tuple<string, int>(c.name, c.count)).ToList());
-            }}
         private PredictionQueue cq { get; set; }
-        private OnnxClassifier clf { get; set; }
+        
 
         private bool isRunning = false;
         public bool IsRunning
@@ -101,26 +88,8 @@ namespace task_2
             NotifyPropertyChanged("Statistics");
         }
 
-        private void PredictionCaught(object sender, PredictionEventArgs e)
+        private void AddPrecomputedPrediction(ModelPrediction mp)
         {
-            dispatcher.BeginInvoke(new Action(() =>
-            {
-                ObservableModelPrediction.Add(new ModelPrediction(e.PredictionResult));
-                var buf = AvailableClasses.Where(x => x.Item1 == e.PredictionResult.ClassName).FirstOrDefault(); 
-
-                if (buf != null) {
-                    AvailableClasses[AvailableClasses.IndexOf(buf)] = new Tuple<string, int>(buf.Item1, buf.Item2 + 1);
-                } else
-                {
-                    AvailableClasses.Add(new Tuple<string, int>(e.PredictionResult.ClassName, 1));
-                }
-                AddToDataBase(e.PredictionResult);
-            }));
-        }
-
-        private void AddPrecomputedPrediction(DbImage di)
-        {
-            var mp = new ModelPrediction(DataBaseContext.Classes.ToList().Find(p => p.ImageClassID == di.ImageClassID).ClassName, di.Proba, di.FilePath, di.ImageDetails.ImageData);
             dispatcher.BeginInvoke(new Action(() =>
             {
                 ObservableModelPrediction.Add(mp);
@@ -137,35 +106,48 @@ namespace task_2
             }));
         }
 
-        private void ExecuteOpen(object param)
+        private void AddPrediction(PredictionResult pr)
+        {
+            dispatcher.BeginInvoke(new Action(() =>
+            {
+                ObservableModelPrediction.Add(new ModelPrediction(pr));
+                var buf = AvailableClasses.Where(x => x.Item1 == pr.ClassName).FirstOrDefault();
+
+                if (buf != null)
+                {
+                    AvailableClasses[AvailableClasses.IndexOf(buf)] = new Tuple<string, int>(buf.Item1, buf.Item2 + 1);
+                }
+                else
+                {
+                    AvailableClasses.Add(new Tuple<string, int>(pr.ClassName, 1));
+                }
+            }));
+        }
+
+        private async void ExecuteOpen(object param)
         {
             ObservableModelPrediction.Clear();
             AvailableClasses.Clear();
             FolderBrowserDialog fbd = new FolderBrowserDialog();
             if (fbd.ShowDialog() == DialogResult.OK)
             {
-                this.clf = new OnnxClassifier(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName + @"\model\resnet50-v2-7.onnx");
-                ThreadPool.QueueUserWorkItem(new WaitCallback(param =>
+                try
                 {
-                    DirectoryInfo d = new DirectoryInfo(fbd.SelectedPath);
-                    FileInfo[] Files = d.GetFiles("*.jpg");
-                    var NewImages = Files.Where(p => !DataBaseContext.Images.AsEnumerable().Any(p2 => p2.FilePath == p.FullName && p2.ImageDetails.ImageData.SequenceEqual(File.ReadAllBytes(p.FullName)))).ToArray();
-                    var OldImages = DataBaseContext.Images.AsEnumerable().Where(p => Files.Any(p2 => p2.FullName == p.FilePath && p.ImageDetails.ImageData.SequenceEqual(File.ReadAllBytes(p2.FullName)))).ToArray();
-
-                    foreach(var i in OldImages)
-                    {
-                        AddPrecomputedPrediction(i);
-                    }
-
-                    if (NewImages.Length > 0)
-                    {
-                        this.dispatcher.BeginInvoke(new Action(() => { this.IsRunning = true; }));
-                        clf.PredictAll(cq, NewImages);
-                        this.dispatcher.BeginInvoke(new Action(() => { this.IsRunning = false; DataBaseContext.SaveChanges();
-                        }));
-                    }
-                    
-                }));
+                    IsRunning = true;
+                    (var OldImages, var NewImages) = await client.PostOld(fbd.SelectedPath, cts);
+                    OldImages.ForEach(delegate (PredictionResponse prs) { AddPrecomputedPrediction(new ModelPrediction(prs.ClassName,prs.Proba,prs.FilePath,Convert.FromBase64String(prs.Image))); });
+                    var NewImagesResults = await client.GetNew(NewImages, cts);
+                    NewImagesResults.ForEach(delegate (PredictionResult pr) { AddPrediction(pr); });
+                    IsRunning = false;
+                }
+                catch(TaskCanceledException tce)
+                {
+                    MessageBox.Show("Tasks were cancelled");
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Prediction failed!");
+                }
             }
         }
 
@@ -174,9 +156,12 @@ namespace task_2
             return !IsRunning;
         }
 
-        private void ExecuteStop(object param)
+        private async void ExecuteStop(object param)
         {
-            clf.StopPrediction();
+            cts.Cancel(false);
+            cts.Dispose();
+            cts = new CancellationTokenSource();
+            IsRunning = false;
         }
 
         private bool CanExecuteStop(object param)
@@ -186,30 +171,34 @@ namespace task_2
 
         private void ExecuteClear(object param)
         {
-                ObservableModelPrediction.Clear();
-                AvailableClasses.Clear();
-
-                foreach (var item in DataBaseContext.Images)
-                {
-                    DataBaseContext.Images.Remove(item);
-                }
-
-                foreach (var item in DataBaseContext.Classes)
-                {
-                    DataBaseContext.Classes.Remove(item);
-                }
-
-                foreach (var item in DataBaseContext.Details)
-                {
-                    DataBaseContext.Details.Remove(item);
-                }
-                DataBaseContext.SaveChanges();
-                NotifyPropertyChanged("Statistics");
+            ObservableModelPrediction.Clear();
+            AvailableClasses.Clear();
+            try
+            {
+                client.Delete();
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Clearing DataBase failed!");
+            }
         }
 
         private bool CanExecuteClear(object param)
         {
             return !IsRunning;
+        }
+
+        private async void ExecuteGetStats(object param)
+        {
+            try
+            {
+                var stats = await client.GetStats();
+                MessageBox.Show(string.Join(Environment.NewLine, stats));
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Gettings stats failed!");
+            }
         }
 
         public ViewModel()
@@ -225,13 +214,11 @@ namespace task_2
                 return (tmp.ClassName == SelectedClass.Item1);
             };
             this.AvailableClasses = new ObservableCollection<Tuple<string, int>>();
-            
-            this.cq = new PredictionQueue();
-            cq.Enqueued += PredictionCaught;
 
             this.OpenCommand = new DelegateCommand(ExecuteOpen, CanExecuteOpen);
             this.StopCommand = new DelegateCommand(ExecuteStop, CanExecuteStop);
             this.ClearDataBaseCommand = new DelegateCommand(ExecuteClear, CanExecuteClear);
+            this.GetStatsCommand = new DelegateCommand(ExecuteGetStats);
         }
     }
 }

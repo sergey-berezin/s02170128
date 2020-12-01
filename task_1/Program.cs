@@ -43,7 +43,7 @@ namespace task_1
                 }
                 clf.StopPrediction();
             });
-            clf.PredictAll(cq, DirPath);
+            clf.PredictAll(cq, new DirectoryInfo(DirPath).GetFiles());
 
             Trace.Listeners.Remove(listener);
             Trace.Close();
