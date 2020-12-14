@@ -5,23 +5,16 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
-using System.Windows.Media.Imaging;
 
-namespace task_2
+namespace Contracts
 {
     public interface IDeepCopy
     {
         object DeepCopy();
     }
 
-    public class ModelPrediction : IDeepCopy
+    public class ModelPrediction : PredictionResult, IDeepCopy
     {
-        private string className;
-        public string ClassName { get { return className; } set { className = value; } }
-        public float proba;
-        private string filepath;
-        public string FilePath { get { return filepath; } set { filepath = value; } }
-
 
         private byte[] imageData;
         public byte[] ImageData
@@ -31,11 +24,8 @@ namespace task_2
         }
         
         public ModelPrediction() { }
-        public ModelPrediction(PredictionResult pr)
+        public ModelPrediction(PredictionResult pr) : base(pr.ClassName, pr.FilePath, pr.Proba)
         {
-            ClassName = pr.ClassName;
-            proba = pr.Proba;
-            filepath = pr.FilePath; 
 
             ImageData = File.ReadAllBytes(pr.FilePath);
         }
@@ -43,14 +33,14 @@ namespace task_2
         public ModelPrediction(string ClassName, float proba, string filepath, byte[] ImageData)
         {
             this.ClassName = ClassName;
-            this.proba = proba;
-            this.filepath = filepath;
+            this.Proba = proba;
+            this.FilePath = filepath;
             this.ImageData = ImageData;
         }
 
         public virtual object DeepCopy()
         {
-            ModelPrediction buf = new ModelPrediction(ClassName, proba, filepath, ImageData);
+            ModelPrediction buf = new ModelPrediction(ClassName, Proba, FilePath, ImageData);
             return buf;
         }
     }

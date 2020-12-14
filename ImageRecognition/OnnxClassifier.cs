@@ -15,19 +15,6 @@ using System.Collections.Concurrent;
 
 namespace ImageRecognition
 {
-    public struct PredictionResult
-    {
-        public string ClassName;
-        public string FilePath;
-        public float Proba;
-        public PredictionResult(string ClassName, string FilePath, float Proba)
-        {
-            this.ClassName = ClassName;
-            this.FilePath = FilePath;
-            this.Proba = Proba;
-        }
-    }
-
     public class OnnxClassifier
     {
         public InferenceSession Session { get; set; }
@@ -38,9 +25,9 @@ namespace ImageRecognition
             this.Session = new InferenceSession(ModelPath);
         }
 
-        private DenseTensor<float> ProcessImage(string ImgPath="sample.jpg")
+        private DenseTensor<float> ProcessImage<T>(T Img)
         {
-            using var image = Image.Load<Rgb24>(ImgPath);
+            using var image = (typeof(T) == typeof(string))?Image.Load<Rgb24>(Img as string):Image.Load<Rgb24>(Img as byte[]);
 
             const int TargetWidth = 224;
             const int TargetHeight = 224;
@@ -73,9 +60,9 @@ namespace ImageRecognition
             return res;
         }
 
-        public PredictionResult Predict(string ImgPath)
+        public PredictionResult Predict(string ImgPath, byte[] img = null)
         {
-            var input = ProcessImage(ImgPath);
+            var input = (img==null)?ProcessImage(ImgPath):ProcessImage(img);
 
             // Вычисляем предсказание нейросетью
 
@@ -93,6 +80,8 @@ namespace ImageRecognition
 
             return new PredictionResult(classLabels[softmax.ToList().IndexOf(softmax.Max())], ImgPath, softmax.ToList().Max());
         }
+
+
         public void StopPrediction()
         {
             CTSource.Cancel();
@@ -109,6 +98,28 @@ namespace ImageRecognition
                         f =>
                         {
                         cq.Enqueue(Predict(f.FullName));
+                        });
+                }
+                catch (OperationCanceledException)
+                {
+                    Trace.WriteLine("*** Tasks were cancelled");
+                }
+            });
+            tasks.Wait();
+        }
+
+        public void PredictAll(PredictionQueue cq, List<Tuple<string, byte[]>> Files)
+        {
+            var tasks = Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    Parallel.ForEach(
+                        Files,
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = CTSource.Token },
+                        f =>
+                        {
+                            cq.Enqueue(Predict(f.Item1, f.Item2));
                         });
                 }
                 catch (OperationCanceledException)
